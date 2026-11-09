@@ -1,9 +1,19 @@
-function App () {
+import { Routes, Route } from 'react-router'
+import HomePage from './pages/HomePage'
+import ExplorePage from './pages/ExplorePage'
+import NotFoundPage from './pages/NotFoundPage'
+import PublicLayout from './layouts/PublicLayout'
+
+function App() {
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-blue-600">
-        Welcome to BookHub
-      </h1>
-    </div>
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/explore" element={<ExplorePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
-}export default App
+}
+
+export default App
