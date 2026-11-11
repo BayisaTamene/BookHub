@@ -1,8 +1,17 @@
+import Hero from "../components/Hero"
+import FeaturedBooks from "../components/FeaturedBooks"
+import Categories from "../components/Categories"
+import PopularBooks from "../components/PopularBooks"
+import Newsletter from "../components/Newsletter"
+
 function HomePage() {
   return (
     <main>
-      <h1>Welcome to BookHub</h1>
-      <p>Your digital library. Discover and explore books.</p>
+      <Hero />
+      <FeaturedBooks />
+      <Categories />
+      <PopularBooks />
+      <Newsletter />
     </main>
   )
 }

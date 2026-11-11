@@ -8,6 +8,7 @@ function PublicLayout() {
     <Navbar />
     <Outlet />
     <Footer />
+
     </>
   )
 }

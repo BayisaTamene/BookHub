@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import ExplorePage from './pages/ExplorePage'
 import NotFoundPage from './pages/NotFoundPage'
 import PublicLayout from './layouts/PublicLayout'
+import BookDetailsPage from './pages/BoohDetails'
 
 function App() {
   return (
@@ -11,6 +12,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="/books/:id" element={<BookDetailsPage />} />
+
       </Route>
     </Routes>
   )
