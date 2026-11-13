@@ -1,17 +1,12 @@
-
 import express from "express";
+import healthRouter from "./modules/health/health.routes.js";
 
 const app = express();
 
 // Parse incoming JSON request bodies.
 app.use(express.json());
 
-// Basic health-check endpoint.
-app.get("/api/health", (_req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "BookHub API is running successfully.",
-  });
-});
+// Register application routes.
+app.use("/api/health", healthRouter);
 
 export default app;
