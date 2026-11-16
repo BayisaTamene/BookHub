@@ -36,3 +36,9 @@ coverage/
 # Operating system
 Thumbs.db
 Desktop.ini
+# Prisma generated client and local skill files
+/server/src/generated/
+/server/.agents/
+/server/.claude/
+/server/.cursor/
+/server/.devin/

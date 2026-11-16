@@ -14,6 +14,10 @@ const envSchema = z.object({
     .min(1)
     .max(65535)
     .default(5000),
+
+  APP_DATABASE_URL: z
+    .string()
+    .url("APP_DATABASE_URL must be a valid database URL"),
 });
 
 // Validate the environment variables.
