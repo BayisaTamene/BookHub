@@ -5,3 +5,10 @@ export const hashPassword = async (password: string): Promise<string> => {
     type: argon2.argon2id,
   });
 };
+
+export const verifyPassword = async (
+  password: string,
+  passwordHash: string
+): Promise<boolean> => {
+  return argon2.verify(passwordHash, password);
+};

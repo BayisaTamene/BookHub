@@ -18,6 +18,9 @@ const envSchema = z.object({
   APP_DATABASE_URL: z
     .string()
     .url("APP_DATABASE_URL must be a valid database URL"),
+  SESSION_SECRET: z
+      .string()
+      .min(32, "SESSION_SECRET must contain at least 32 characters."),
 });
 
 // Validate the environment variables.
