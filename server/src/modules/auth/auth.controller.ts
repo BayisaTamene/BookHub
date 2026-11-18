@@ -156,3 +156,19 @@ export const logout = async (
     next(error);
   }
 };
+
+// Return the currently authenticated user's information.
+export const me = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: req.user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
