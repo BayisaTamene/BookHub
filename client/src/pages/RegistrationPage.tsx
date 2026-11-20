@@ -1,23 +1,56 @@
-
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+
+import { authApi } from "../lib/auth";
 
 function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const navigate = useNavigate();
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // Prevent submitting while another registration request is in progress.
+    if (isSubmitting) return;
 
     if (password !== confirmPassword) {
       setMessage("Passwords do not match.");
       return;
     }
 
-    setMessage(
-      "Registration form validated. Backend authentication is not connected yet."
-    );
+    // Read name and email directly from the submitted form.
+    const formData = new FormData(event.currentTarget);
+
+    const name = (formData.get("fullName") as string).trim();
+    const email = (formData.get("email") as string).trim();
+
+    setMessage("");
+    setIsSubmitting(true);
+
+    try {
+      // Send the registration data to the existing backend API.
+      await authApi.register({ name, email, password });
+
+      // Registration doesn't create a login session.
+      // Redirect to login and pass a success message.
+      navigate("/login", {
+        state: { message: "Account created successfully. Please sign in." },
+      });
+    } catch (error) {
+      // Display the API error, such as an already registered email.
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Registration failed. Please try again.",
+      );
+    } finally {
+      // Re-enable the button after the request completes.
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -108,28 +141,24 @@ function RegisterPage() {
               autoComplete="new-password"
               placeholder="Confirm your password"
               value={confirmPassword}
-              onChange={(event) =>
-                setConfirmPassword(event.target.value)
-              }
+              onChange={(event) => setConfirmPassword(event.target.value)}
               required
               className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           {message && (
-            <p
-              role="status"
-              className="text-sm text-blue-600"
-            >
+            <p role="alert" className="text-sm text-red-600">
               {message}
             </p>
           )}
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+            disabled={isSubmitting}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create Account
+            {isSubmitting ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 

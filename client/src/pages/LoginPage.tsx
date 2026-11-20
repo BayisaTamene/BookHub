@@ -1,25 +1,58 @@
-
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Read the success message passed from the registration page.
+  const registrationMessage = (location.state as { message?: string } | null)
+    ?.message;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setMessage(
-      "Login form validated. Backend authentication is not connected yet."
-    );
+    // Prevent duplicate login requests.
+    if (isSubmitting) return;
+
+    const formData = new FormData(event.currentTarget);
+
+    const email = (formData.get("email") as string).trim();
+    const password = formData.get("password") as string;
+
+    setMessage("");
+    setIsSubmitting(true);
+
+    try {
+      // Authenticate the user and update the shared AuthContext.
+      await login(email, password);
+
+      // Navigate to the home page after successful authentication.
+      navigate("/");
+    } catch (error) {
+      // Display the backend authentication error.
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please try again.",
+      );
+    } finally {
+      // Restore the button after the request finishes.
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome Back
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
 
           <p className="mt-2 text-gray-600">
             Sign in to continue exploring BookHub.
@@ -65,17 +98,24 @@ function LoginPage() {
             />
           </div>
 
+          {registrationMessage && (
+            <p role="status" className="text-sm text-green-600">
+              {registrationMessage}
+            </p>
+          )}
+
           {message && (
-            <p role="status" className="text-sm text-blue-600">
+            <p role="alert" className="text-sm text-red-600">
               {message}
             </p>
           )}
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+            disabled={isSubmitting}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign In
+            {isSubmitting ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
