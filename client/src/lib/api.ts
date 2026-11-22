@@ -1,4 +1,17 @@
+
 const API_BASE_URL = "/api";
+
+// Represents an HTTP error and preserves its response status code.
+export class ApiError extends Error {
+  public readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 async function request<T>(
   endpoint: string,
@@ -16,10 +29,27 @@ async function request<T>(
     credentials: "include",
   });
 
-  const data = await response.json();
+  // Read the response body once, then parse it if it contains JSON.
+  const responseText = await response.text();
+
+  let data: { message?: string } | undefined;
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText) as { message?: string };
+    } catch {
+      throw new ApiError(
+        "The server returned an invalid response.",
+        response.status,
+      );
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || "Something went wrong.");
+    throw new ApiError(
+      data?.message || "Something went wrong.",
+      response.status,
+    );
   }
 
   return data as T;

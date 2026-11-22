@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { authApi } from "../lib/auth";
+import { ApiError } from "../lib/api";
 import type { User } from "../types/auth";
 
 // Defines the information and functions shared across the application.
@@ -15,6 +16,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authError: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -31,6 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Starts as true because we must check the existing session first.
   const [isLoading, setIsLoading] = useState(true);
 
+  // Stores failures that prevent us from verifying the current session.
+  const [authError, setAuthError] = useState<string | null>(null);
+
   useEffect(() => {
     // Tracks whether this provider is still mounted.
     let isMounted = true;
@@ -39,19 +44,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi
       .getCurrentUser()
       .then((response) => {
-        // Update the user only if the provider is still mounted.
         if (isMounted) {
           setUser(response.data);
+          setAuthError(null);
         }
       })
-      .catch(() => {
-        // No valid session or a failed request: treat the user as logged out.
-        if (isMounted) {
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+
+        // A 401 means the server confirmed there is no valid session.
+        if (error instanceof ApiError && error.status === 401) {
           setUser(null);
+          setAuthError(null);
+          return;
         }
+
+        // Other failures mean session verification was unsuccessful.
+        setAuthError(
+          "Unable to verify your session. Please check your connection and try again.",
+        );
       })
       .finally(() => {
-        // Finish the initial loading state after the request settles.
         if (isMounted) {
           setIsLoading(false);
         }
@@ -66,13 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sends login credentials to the backend and stores the returned user.
   async function login(email: string, password: string): Promise<void> {
     const response = await authApi.login({ email, password });
+
     setUser(response.data);
+    setAuthError(null);
   }
 
   // Ends the server session before clearing the frontend user state.
   async function logout(): Promise<void> {
     await authApi.logout();
+
     setUser(null);
+    setAuthError(null);
   }
 
   // Makes authentication information available to all child components.
@@ -82,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: user !== null,
+        authError,
         login,
         logout,
       }}

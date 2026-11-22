@@ -8,6 +8,7 @@ import { authRouter } from "./modules/auth/auth.routes.js";
 import session from "express-session";
 import { env } from "./config/env.js";
 import { sessionStore } from "./config/session-store.js";
+import { booksRouter } from "./modules/books/books.routes.js";
 
 const app = express();
 
@@ -34,6 +35,8 @@ app.use(
 app.use("/api/health", healthRouter);
 
 app.use("/api/categories", categoriesRouter);
+
+app.use("/api/books", booksRouter);
 
 app.use("/api/auth", authRouter);
 

@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { NavLink } from "react-router";
 
 import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, authError, logout } = useAuth();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -65,12 +66,21 @@ function Navbar() {
         {/* Authentication navigation */}
         <div className="flex items-center gap-4">
           {isLoading ? (
-            <span className="text-sm text-slate-500">Checking session...</span>
+            <span className="text-sm text-slate-500">
+              Checking session...
+            </span>
+          ) : authError ? (
+            <span role="alert" className="text-sm text-red-600">
+              Session unavailable
+            </span>
           ) : user ? (
             <>
-              <span className="text-sm font-medium text-slate-700">
+              <NavLink
+                to="/profile"
+                className="text-sm font-medium text-slate-700 transition hover:text-blue-600"
+              >
                 Hello, {user.name}
-              </span>
+              </NavLink>
 
               <button
                 type="button"
