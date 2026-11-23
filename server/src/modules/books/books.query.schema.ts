@@ -19,3 +19,8 @@ export const booksQuerySchema = z.object({
   // Search text is optional and limited in length.
   search: z.string().trim().max(100).optional(),
 });
+
+export const bookIdSchema = z.object({
+  id: z.uuid(),
+});
+

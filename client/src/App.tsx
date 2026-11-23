@@ -3,7 +3,7 @@ import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PublicLayout from "./layouts/PublicLayout";
-import BookDetailsPage from "./pages/BoohDetails";
+import BookDetailsPage from "./pages/BookDetails";
 import RegisterPage from "./pages/RegistrationPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";

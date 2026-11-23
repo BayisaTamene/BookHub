@@ -2,7 +2,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../../config/prisma.js";
 import type { z } from "zod";
-import { booksQuerySchema } from "./books.query.schema.js";
+import { booksQuerySchema, bookIdSchema } from "./books.query.schema.js";
+import AppError from "../../utils/app-error.js";
 
 // Infer the validated query type directly from the Zod schema.
 type BooksQuery = z.infer<typeof booksQuerySchema>;
@@ -122,3 +123,67 @@ export const getBooks = async (
     next(error);
   }
 };
+
+type BookIdParams = z.infer<typeof bookIdSchema>;
+
+export const getBookById = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    // Use the validated UUID from the route parameters.
+    const { id } = res.locals.validated.params as BookIdParams;
+
+    // Retrieve one publicly available book.
+    const book = await prisma.book.findFirst({
+      where: {
+        id,
+        status: "PUBLISHED",
+        archivedAt: null,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        isbn: true,
+        originalPublishedAt: true,
+        coverImageKey: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        authors: {
+          select: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Treat unavailable books as not found.
+    if (!book) {
+      next(new AppError("Book not found.", 404));
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        book,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
