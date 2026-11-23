@@ -42,3 +42,6 @@ Desktop.ini
 /server/.claude/
 /server/.cursor/
 /server/.devin/
+
+# User-uploaded files
+/server/storage/
