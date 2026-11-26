@@ -202,14 +202,17 @@ const countZipEntryBytes = async (
 const validateEpubArchive = async (
   filePath: string,
 ): Promise<void> => {
-  // Open the EPUB archive for inspection.
-  const zipFile = await yauzl.openPromise(filePath, {
+    // Hold the archive reference so it can be closed after validation.
+    let zipFile: Awaited<ReturnType<typeof yauzl.openPromise>> | undefined;
+
+  try {
+    // Open the EPUB archive for inspection.
+   zipFile = await yauzl.openPromise(filePath, {
     lazyEntries: true,
+    autoClose: false,
     validateEntrySizes: true,
     strictFileNames: true,
   });
-
-  try {
     // Store archive entries by their internal filenames.
     const entries = new Map<string, yauzl.Entry>();
 
@@ -314,9 +317,17 @@ for await (const entry of zipFile.eachEntry()) {
     if (!packageEntry || packageEntry.fileName.endsWith("/")) {
       throw new AppError("EPUB package document is missing.", 415);
     }
+  } catch (error) {
+    // Preserve application errors raised by EPUB validation.
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    // Convert unexpected ZIP parsing errors into a controlled application error.
+    throw new AppError("Invalid EPUB archive.", 415);
   } finally {
-    // Close the ZIP archive even if validation fails.
-    zipFile.close();
+        // Close the archive only if it was successfully opened.
+    zipFile?.close();
   }
 };
 
