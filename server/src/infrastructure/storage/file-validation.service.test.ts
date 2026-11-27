@@ -334,6 +334,67 @@ const createEpubWithPathTraversalFixture = (): Buffer => {
   return Buffer.from(archive);
 };
 
+// Creates an EPUB containing an archive entry with directory traversal.
+const createEpubWithUnsafeEntryPathFixture = (): Buffer => {
+  const archive = zipSync({
+    // Required first EPUB entry.
+    mimetype: [
+      strToU8("application/epub+zip"),
+      { level: 0 },
+    ],
+
+    "META-INF/container.xml": strToU8(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <container
+        xmlns="urn:oasis:names:tc:opendocument:xmlns:container"
+        version="1.0">
+        <rootfiles>
+          <rootfile
+            full-path="EPUB/package.opf"
+            media-type="application/oebps-package+xml"/>
+        </rootfiles>
+      </container>`,
+    ),
+
+    "EPUB/package.opf": strToU8("<package/>"),
+
+    // Unsafe entry path attempting directory traversal.
+    "EPUB//unsafe.txt": strToU8("unsafe content"),
+  });
+
+  return Buffer.from(archive);
+};
+
+// Creates an EPUB containing a Windows drive-qualified archive path.
+const createEpubWithWindowsDrivePathFixture = (): Buffer => {
+  const archive = zipSync({
+    mimetype: [
+      strToU8("application/epub+zip"),
+      { level: 0 },
+    ],
+
+    "META-INF/container.xml": strToU8(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <container
+        xmlns="urn:oasis:names:tc:opendocument:xmlns:container"
+        version="1.0">
+        <rootfiles>
+          <rootfile
+            full-path="EPUB/package.opf"
+            media-type="application/oebps-package+xml"/>
+        </rootfiles>
+      </container>`,
+    ),
+
+    "EPUB/package.opf": strToU8("<package/>"),
+
+    // Unsafe Windows drive-qualified path.
+    "C:/outside.txt": strToU8("unsafe content"),
+  });
+
+  return Buffer.from(archive);
+};
+
 // Creates an EPUB-like archive with an absolute package document path.
 const createEpubWithAbsolutePackagePathFixture = (): Buffer => {
   const archive = zipSync({
@@ -728,6 +789,55 @@ const createEpubWithOversizedMimetypeFixture = (): Buffer => {
 
     // Include a valid package document.
     "EPUB/package.opf": strToU8("<package/>"),
+  });
+
+  return Buffer.from(archive);
+};
+
+// Creates an EPUB whose declared package document is a directory instead of a regular file.
+const createEpubWithDirectoryPackage = () =>
+  zipSync({
+    mimetype: [strToU8("application/epub+zip"), { level: 0 }],
+    "META-INF/container.xml": strToU8(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+        <rootfiles>
+          <rootfile
+            full-path="EPUB/package.opf"
+            media-type="application/oebps-package+xml"
+          />
+        </rootfiles>
+      </container>`,
+    ),
+    "EPUB/package.opf/": new Uint8Array(),
+  });
+
+  // Creates an EPUB with a directory entry containing unexpected file data.
+const createEpubWithDirectoryDataFixture = (): Buffer => {
+  const archive = zipSync({
+    // Required first EPUB entry.
+    mimetype: [
+      strToU8("application/epub+zip"),
+      { level: 0 },
+    ],
+
+    "META-INF/container.xml": strToU8(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <container
+        xmlns="urn:oasis:names:tc:opendocument:xmlns:container"
+        version="1.0">
+        <rootfiles>
+          <rootfile
+            full-path="EPUB/package.opf"
+            media-type="application/oebps-package+xml"/>
+        </rootfiles>
+      </container>`,
+    ),
+
+    "EPUB/package.opf": strToU8("<package/>"),
+
+    // A directory entry containing unexpected data.
+    "EPUB/unexpected/": strToU8("unexpected directory data"),
   });
 
   return Buffer.from(archive);
@@ -1274,3 +1384,84 @@ test("rejects an EPUB with an oversized mimetype entry", async () => {
     await storage.delete(key);
   }
 });
+
+//Reject an EPUB when the package document is a directory.
+test("rejects an EPUB when the package document is a directory", async () => {
+  const key = `quarantine/${randomUUID()}`;
+
+  try {
+    await storage.save(
+      Readable.from([createEpubWithDirectoryPackage()]),
+      key,
+      { contentType: "application/epub+zip" },
+    );
+
+    await assert.rejects(
+      validateFileType(key, "book"),
+      { statusCode: 415 },
+    );
+  } finally {
+    await storage.delete(key);
+  }
+});
+
+// Rejects an EPUB directory entry containing unexpected file data.
+test("rejects an EPUB directory entry containing unexpected data", async () => {
+  const key = `quarantine/${randomUUID()}`;
+
+  try {
+    await storage.save(
+      Readable.from([createEpubWithDirectoryDataFixture()]),
+      key,
+      { contentType: "application/epub+zip" },
+    );
+
+    await assert.rejects(
+      validateFileType(key, "book"),
+      { message: "Invalid EPUB directory entry." },
+    );
+  } finally {
+    await storage.delete(key);
+  }
+});
+
+// Rejects an EPUB containing an unsafe archive entry path.
+test("rejects an EPUB with an unsafe archive entry path", async () => {
+  const key = `quarantine/${randomUUID()}`;
+
+  try {
+    await storage.save(
+      Readable.from([createEpubWithUnsafeEntryPathFixture()]),
+      key,
+      { contentType: "application/epub+zip" },
+    );
+
+    await assert.rejects(
+      validateFileType(key, "book"),
+      { message: "Unsafe EPUB archive entry path." },
+    );
+  } finally {
+    await storage.delete(key);
+  }
+});
+
+// Rejects an EPUB containing a Windows drive-qualified archive path.
+test("rejects an EPUB with a Windows drive-qualified archive path", async () => {
+  const key = `quarantine/${randomUUID()}`;
+
+  try {
+    await storage.save(
+      Readable.from([createEpubWithWindowsDrivePathFixture()]),
+      key,
+      { contentType: "application/epub+zip" },
+    );
+
+    await assert.rejects(
+      validateFileType(key, "book"),
+      { message: "Invalid EPUB archive." },
+    );
+  } finally {
+    await storage.delete(key);
+  }
+});
+

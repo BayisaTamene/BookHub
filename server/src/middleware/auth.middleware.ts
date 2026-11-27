@@ -47,3 +47,20 @@ export const authenticate = async (
     next(error);
   }
 };
+
+// Restrict access to administrator accounts.
+export const authorizeAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (req.user?.role !== "ADMIN") {
+    res.status(403).json({
+      success: false,
+      message: "Administrator access required.",
+    });
+    return;
+  }
+
+  next();
+};

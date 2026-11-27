@@ -10,7 +10,6 @@ import { SaxesParser } from "saxes";
 
 import { storage } from "./storage.service.js";
 import AppError from "../../utils/app-error.js";
-import { endsWith } from "zod";
 
 // Create a temporary copy of a stored file for archive inspection.
 const createTemporaryFile = async (key: string): Promise<string> => {
@@ -132,6 +131,31 @@ const validatePackagePath = (packagePath: string): string => {
   return packagePath;
 };
 
+// Validates an individual EPUB archive entry filename.
+const validateArchiveEntryPath = (entryPath: string): void => {
+  // Directory entries may have one trailing slash.
+  const pathWithoutTrailingSlash = entryPath.endsWith("/")
+    ? entryPath.slice(0, -1)
+    : entryPath;
+
+  const segments = pathWithoutTrailingSlash.split("/");
+
+  // Reject unsafe paths and invalid path segments.
+  if (
+    !pathWithoutTrailingSlash ||
+    pathWithoutTrailingSlash.startsWith("/") ||
+    /^[a-zA-Z]:/.test(pathWithoutTrailingSlash) ||
+    pathWithoutTrailingSlash.includes("\\") ||
+    pathWithoutTrailingSlash.includes("\0") ||
+    segments.some(
+      (segment) =>
+        !segment || segment === "." || segment === "..",
+    )
+  ) {
+    throw new AppError("Unsafe EPUB archive entry path.", 415);
+  }
+};
+
 // Reads one ZIP entry while enforcing a maximum amount of data.
 const readZipEntry = async (
   zipFile: yauzl.ZipFile,
@@ -234,13 +258,20 @@ for await (const entry of zipFile.eachEntry()) {
     throw new AppError("EPUB contains duplicate archive entries.", 415);
   }
 
+  // Reject unsafe archive entry paths.
+validateArchiveEntryPath(entry.fileName);
+
   // Save the entry for later metadata inspection.
   entries.set(entry.fileName, entry);
 
-  // Directory entries do not contain file data.
-  if (entry.fileName.endsWith("/")) {
-    continue;
+  // Skip directory entries after confirming they contain no file data.
+if (entry.fileName.endsWith("/")) {
+  if (entry.uncompressedSize !== 0) {
+    throw new AppError("Invalid EPUB directory entry.", 415);
   }
+
+  continue;
+}
 
   // Calculate the remaining space allowed for decompressed data.
   const remainingBytes = 200 * 1024 * 1024 - totalUncompressedSize;
@@ -348,7 +379,7 @@ const allowedBookTypes = [
 export const validateFileType = async (
   key: string,
   category: "image" | "book",
-): Promise<void> => {
+): Promise<"PDF" | "EPUB" | "JPEG" | "PNG" | "WEBP"> => {
   // Open the quarantined file as a readable stream.
   const fileStream = await storage.read(key);
 
@@ -387,5 +418,19 @@ export const validateFileType = async (
         force: true,
       });
     }
+  }
+    switch (detectedType.mime) {
+    case "application/pdf":
+      return "PDF";
+    case "application/epub+zip":
+      return "EPUB";
+    case "image/jpeg":
+      return "JPEG";
+    case "image/png":
+      return "PNG";
+    case "image/webp":
+      return "WEBP";
+    default:
+      throw new AppError("Unsupported file format.", 415);
   }
 };

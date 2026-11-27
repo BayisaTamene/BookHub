@@ -24,3 +24,38 @@ export const bookIdSchema = z.object({
   id: z.uuid(),
 });
 
+
+const optionalBookString = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === ""
+      ? undefined
+      : value,
+  z.string().trim().optional(),
+);
+
+// Validate metadata submitted with a book upload.
+export const bookCreateSchema = z.object({
+  title: z.string().trim().min(1).max(255),
+
+  categoryId: z.uuid(),
+
+  description: optionalBookString,
+
+  isbn: optionalBookString.pipe(
+    z.string().max(20).optional(),
+  ),
+
+  authorIds: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    },
+    z.array(z.uuid()).optional(),
+  ),
+});
+
